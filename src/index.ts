@@ -4,7 +4,7 @@ import commander from 'commander';
 import BigNumber from 'bignumber.js'
 import { obtainKitContractDetails } from '@celo/contractkit/lib/explorer/base'
 import { BlockExplorer } from '@celo/contractkit/lib/explorer/block-explorer'
-import { Proposal, ProposalTransaction, ProposalStage } from '@celo/contractkit/lib/wrappers/Governance';
+import { Proposal, ProposalTransaction, ProposalStage, VoteValue } from '@celo/contractkit/lib/wrappers/Governance';
 import { Transaction } from 'web3-eth'
 import { concurrentMap } from '@celo/utils/lib/async'
 
@@ -85,27 +85,49 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 
 	const durations = await governance.stageDurations()
 	const propEpoch = record.metadata.timestamp
-	const referrendumEpoch = propEpoch.plus(durations[ProposalStage.Approval])
-	const executionEpoch = referrendumEpoch.plus(durations[ProposalStage.Referendum])
-	const expirationEpoch = executionEpoch.plus(durations[ProposalStage.Execution])
+	const referrendumEpoch = propEpoch.plus(durations.Approval)
+	const executionEpoch = referrendumEpoch.plus(durations.Referendum)
+	const expirationEpoch = executionEpoch.plus(durations.Execution)
 
 	const proposerURL = "https://explorer.celo.org/address/" + record.metadata.proposer
 	console.debug(`ProposalID: ${proposalID}`)
 	console.debug(`Proposer: ${proposerURL}`)
 	console.debug(`Description: ${record.metadata.descriptionURL}`)
-	console.debug(`Stage: ${record.stage}`)
-	console.debug(`Proposed:   ${epochDate(propEpoch)}`)
-	if ([ProposalStage.Queued, ProposalStage.Approval].indexOf(record.stage) >= 0) {
-		console.debug(`Referendum: ${epochDate(referrendumEpoch)}`)
-	}
-	if ([ProposalStage.Queued, ProposalStage.Approval, ProposalStage.Referendum].indexOf(record.stage) >= 0) {
-		console.debug(`Execution:  ${epochDate(executionEpoch)}`)
-	}
-	if (record.stage != ProposalStage.Expiration) {
-		console.debug(`Expires:    ${epochDate(expirationEpoch)}`)
+
+	let stage = record.stage
+	if (stage !== ProposalStage.Queued) {
+		const isExpired = governance.isDequeuedProposalExpired(proposalID)
+		if (isExpired) {
+			stage = ProposalStage.Expiration
+		}
 	}
 
-	console.debug("")
+	console.debug(`Stage:      ${stage}`)
+	console.debug(`Proposed:   ${epochDate(propEpoch)}`)
+	if ([ProposalStage.Queued, ProposalStage.Approval].indexOf(stage) >= 0) {
+		console.debug(`Referendum: ${epochDate(referrendumEpoch)}`)
+	}
+	if ([ProposalStage.Queued, ProposalStage.Approval, ProposalStage.Referendum].indexOf(stage) >= 0) {
+		console.debug(`Execution:  ${epochDate(executionEpoch)}`)
+	}
+	if (stage != ProposalStage.Expiration) {
+		console.debug(`Expires:    ${epochDate(expirationEpoch)}`)
+	}
+	const isApproved = await governance.isApproved(proposalID)
+	console.debug(`Approved:   ${isApproved}`)
+	console.debug(`UpVotes:    ${record.upvotes.div(1e18).toFixed(18)}`)
+	if (isApproved) {
+		console.debug(`Passing:    ${record.passing}`)
+		const total = record.votes.Yes.plus(record.votes.No).plus(record.votes.Abstain)
+		const pctYes = record.votes.Yes.multipliedBy(100).dividedToIntegerBy(total)
+		const pctNo = record.votes.No.multipliedBy(100).dividedToIntegerBy(total)
+		const pctAbst = record.votes.Abstain.multipliedBy(100).dividedToIntegerBy(total)
+		console.debug(`  YES:     ${pctYes}% - ${record.votes.Yes.div(1e18).toFixed(18)}`)
+		console.debug(`  NO:      ${pctNo}% - ${record.votes.No.div(1e18).toFixed(18)}`)
+		console.debug(`  ABSTAIN: ${pctAbst}% - ${record.votes.Abstain.div(1e18).toFixed(18)}`)
+	}
+
+	console.debug(``)
 	for (const idx in record.proposal) {
 		const tx = propJSON[idx]
 		const params: string[] = []
@@ -145,7 +167,7 @@ async function viewOrList(kit: ContractKit, proposalID: any) {
 
 	const queue = await governance.getQueue()
 	if (queue.length > 0) {
-		console.debug("")
+		console.debug(``)
 		console.debug(`Queued (${queue.length}):`)
 		for (const q of queue) {
 			const expired = await governance.isQueuedProposalExpired(q.proposalID)
