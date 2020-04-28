@@ -1,0 +1,39 @@
+{
+  "name": "celogovernance",
+  "version": "0.0.1",
+  "description": "More experssive version of `celocli governance:view`.",
+  "main": "./dist/index.js",
+  "bin": {
+    "celogovernance": "./dist/index.js"
+  },
+  "scripts": {
+    "start": "npx ts-node src/index.ts",
+    "build": "rm -rf ./dist && npx tsc -p .",
+    "test": "npx jest",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zviadm/celogovernance.git"
+  },
+  "author": "Zviad Metreveli",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.9.0",
+    "@babel/preset-env": "^7.9.5",
+    "@babel/preset-typescript": "^7.9.0",
+    "@types/ethereumjs-util": "^5.2.0",
+    "@types/jest": "^25.2.1",
+    "babel-jest": "^25.4.0",
+    "jest": "^25.4.0",
+    "ts-lint": "^4.5.1",
+    "ts-node": "^8.9.0",
+    "tslint": "^6.1.1",
+    "typescript": "^3.8.3"
+  },
+  "dependencies": {
+    "@celo/contractkit": "^0.4.1",
+    "bignumber.js": "^9.0.0",
+    "commander": "^5.0.0"
+  }
+}
