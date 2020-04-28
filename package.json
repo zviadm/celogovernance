@@ -1,7 +1,7 @@
 {
   "name": "celogovernance",
   "version": "0.0.1",
-  "description": "More experssive version of `celocli governance:view`.",
+  "description": "Parse and read CELO governance proposals.",
   "main": "./dist/index.js",
   "bin": {
     "celogovernance": "./dist/index.js"
