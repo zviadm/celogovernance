@@ -4,7 +4,7 @@ import commander from 'commander';
 import BigNumber from 'bignumber.js'
 import { obtainKitContractDetails } from '@celo/contractkit/lib/explorer/base'
 import { BlockExplorer } from '@celo/contractkit/lib/explorer/block-explorer'
-import { Proposal, ProposalTransaction } from '@celo/contractkit/lib/wrappers/Governance';
+import { Proposal, ProposalTransaction, ProposalStage } from '@celo/contractkit/lib/wrappers/Governance';
 import { Transaction } from 'web3-eth'
 import { concurrentMap } from '@celo/utils/lib/async'
 
@@ -73,11 +73,39 @@ export const proposalToJSON = async (kit: ContractKit, proposal: Proposal) => {
 	})
 }
 
+function epochDate(epochSecs: BigNumber): string {
+	const d = new Date(epochSecs.multipliedBy(1000).toNumber())
+	return `${d.toUTCString()}`
+}
+
 async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	const governance = await kit.contracts.getGovernance()
 	const record = await governance.getProposalRecord(proposalID)
 	const propJSON = await proposalToJSON(kit, record.proposal)
-	console.debug(`ProposalID: ${proposalID}, Transactions: ${record.proposal.length}`)
+
+	const durations = await governance.stageDurations()
+	const propEpoch = record.metadata.timestamp
+	const referrendumEpoch = propEpoch.plus(durations[ProposalStage.Approval])
+	const executionEpoch = referrendumEpoch.plus(durations[ProposalStage.Referendum])
+	const expirationEpoch = executionEpoch.plus(durations[ProposalStage.Execution])
+
+	const proposerURL = "https://explorer.celo.org/address/" + record.metadata.proposer
+	console.debug(`ProposalID: ${proposalID}`)
+	console.debug(`Proposer: ${proposerURL}`)
+	console.debug(`Description: ${record.metadata.descriptionURL}`)
+	console.debug(`Stage: ${record.stage}`)
+	console.debug(`Proposed:   ${epochDate(propEpoch)}`)
+	if ([ProposalStage.Queued, ProposalStage.Approval].indexOf(record.stage) >= 0) {
+		console.debug(`Referendum: ${epochDate(referrendumEpoch)}`)
+	}
+	if ([ProposalStage.Queued, ProposalStage.Approval, ProposalStage.Referendum].indexOf(record.stage) >= 0) {
+		console.debug(`Execution:  ${epochDate(executionEpoch)}`)
+	}
+	if (record.stage != ProposalStage.Expiration) {
+		console.debug(`Expires:    ${epochDate(expirationEpoch)}`)
+	}
+
+	console.debug("")
 	for (const idx in record.proposal) {
 		const tx = propJSON[idx]
 		const params: string[] = []
@@ -88,7 +116,7 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 		if (params.length === 1) {
 			paramsMsg = params[0]
 		} else if (params.length > 1) {
-			paramsMsg = "\n    " + params.join(",\n    ") + "\n"
+			paramsMsg = "\n    " + params.join(",\n    ") + ",\n"
 		}
 		console.debug(`${tx.contract}.${tx.function}(${paramsMsg})`)
 	}
@@ -101,14 +129,13 @@ async function viewOrList(kit: ContractKit, proposalID: any) {
 	}
 
 	const governance = await kit.contracts.getGovernance()
-
 	const pastQueue = await governance.getDequeue(true)
 	if (pastQueue.length > 0) {
 		console.debug(`Proposals (${pastQueue.length}):`)
 		for (const proposalID of pastQueue) {
 			const expired = await governance.isDequeuedProposalExpired(proposalID)
 			const stage = await governance.getProposalStage(proposalID)
-			let msg = `ID: ${proposalID} ${stage}`
+			let msg = `ID: ${proposalID} - ${stage}`
 			if (expired) {
 				msg += ` (EXPIRED)`
 			}
