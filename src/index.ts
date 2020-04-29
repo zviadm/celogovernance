@@ -95,36 +95,39 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	console.debug(`Description: ${record.metadata.descriptionURL}`)
 
 	let stage = record.stage
-	if (stage !== ProposalStage.Queued) {
+	if (stage === ProposalStage.Queued) {
+		console.debug(`Stage:      ${stage}`)
+		console.debug(`Proposed:   ${epochDate(propEpoch)}`)
+		console.debug(`Expires:    ${epochDate(expirationEpoch)}`)
+		console.debug(`UpVotes:    ${record.upvotes.div(1e18).toFixed(18)}`)
+	} else {
 		const isExpired = await governance.isDequeuedProposalExpired(proposalID)
 		if (isExpired) {
 			stage = ProposalStage.Expiration
 		}
-	}
-
-	console.debug(`Stage:      ${stage}`)
-	console.debug(`Proposed:   ${epochDate(propEpoch)}`)
-	if ([ProposalStage.Queued, ProposalStage.Approval].indexOf(stage) >= 0) {
-		console.debug(`Referendum: ${epochDate(referrendumEpoch)}`)
-	}
-	if ([ProposalStage.Queued, ProposalStage.Approval, ProposalStage.Referendum].indexOf(stage) >= 0) {
-		console.debug(`Execution:  ${epochDate(executionEpoch)}`)
-	}
-	if (stage != ProposalStage.Expiration) {
-		console.debug(`Expires:    ${epochDate(expirationEpoch)}`)
-	}
-	const isApproved = await governance.isApproved(proposalID)
-	console.debug(`Approved:   ${isApproved}`)
-	console.debug(`UpVotes:    ${record.upvotes.div(1e18).toFixed(18)}`)
-	if (isApproved) {
-		console.debug(`Passing:    ${record.passing}`)
-		const total = record.votes.Yes.plus(record.votes.No).plus(record.votes.Abstain)
-		const pctYes = record.votes.Yes.multipliedBy(100).dividedToIntegerBy(total)
-		const pctNo = record.votes.No.multipliedBy(100).dividedToIntegerBy(total)
-		const pctAbst = record.votes.Abstain.multipliedBy(100).dividedToIntegerBy(total)
-		console.debug(`  YES:     ${pctYes}% - ${record.votes.Yes.div(1e18).toFixed(18)}`)
-		console.debug(`  NO:      ${pctNo}% - ${record.votes.No.div(1e18).toFixed(18)}`)
-		console.debug(`  ABSTAIN: ${pctAbst}% - ${record.votes.Abstain.div(1e18).toFixed(18)}`)
+		console.debug(`Stage:      ${stage}`)
+		console.debug(`Dequeued:   ${epochDate(propEpoch)}`)
+		if (stage === ProposalStage.Approval) {
+			console.debug(`Referendum: ${epochDate(referrendumEpoch)}`)
+		}
+		if (stage === ProposalStage.Approval || stage === ProposalStage.Referendum) {
+			console.debug(`Execution:  ${epochDate(executionEpoch)}`)
+		}
+		if (stage != ProposalStage.Expiration) {
+			console.debug(`Expires:    ${epochDate(expirationEpoch)}`)
+		}
+		const isApproved = await governance.isApproved(proposalID)
+		console.debug(`Approved:   ${String(isApproved).toUpperCase()}`)
+		if (isApproved) {
+			console.debug(`Passing:    ${String(record.passing).toUpperCase()}`)
+			const total = record.votes.Yes.plus(record.votes.No).plus(record.votes.Abstain)
+			const pctYes = record.votes.Yes.multipliedBy(100).dividedToIntegerBy(total)
+			const pctNo = record.votes.No.multipliedBy(100).dividedToIntegerBy(total)
+			const pctAbst = record.votes.Abstain.multipliedBy(100).dividedToIntegerBy(total)
+			console.debug(`  YES:     ${pctYes}% - ${record.votes.Yes.div(1e18).toFixed(18)}`)
+			console.debug(`  NO:      ${pctNo}% - ${record.votes.No.div(1e18).toFixed(18)}`)
+			console.debug(`  ABSTAIN: ${pctAbst}% - ${record.votes.Abstain.div(1e18).toFixed(18)}`)
+		}
 	}
 
 	console.debug(``)
