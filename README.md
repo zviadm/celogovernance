@@ -12,11 +12,13 @@ $ celogovernance --proposalID 1
 ProposalID: 1
 Proposer: https://explorer.celo.org/address/0xF3EB910DA09B8AF348E0E5B6636da442cFa79239
 Description: https://gist.github.com/aslawson/a1f693f0e4c5fd391eac463237c4182a
-Stage: Queued
-Proposed:   Mon, 27 Apr 2020 23:46:07 GMT
-Referendum: Tue, 28 Apr 2020 23:46:07 GMT
-Execution:  Thu, 30 Apr 2020 23:46:07 GMT
-Expires:    Sun, 03 May 2020 23:46:07 GMT
+Stage:      Approval
+Dequeued:   Wed, 29 Apr 2020 00:28:42 GMT
+Referendum: Thu, 30 Apr 2020 00:28:42 GMT
+Execution:  Sat, 02 May 2020 00:28:42 GMT
+Expires:    Tue, 05 May 2020 00:28:42 GMT
+Approved:   TRUE
+Passing:    FALSE (voting hasn't started yet!)
 
 Freezer.unfreeze(target=contract.Election:0x8D6677192144292870907E3Fa8A5527fE55A7ff6)
 EpochRewards.setCarbonOffsettingFund(

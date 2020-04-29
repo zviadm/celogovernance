@@ -118,7 +118,9 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 		}
 		const isApproved = await governance.isApproved(proposalID)
 		console.debug(`Approved:   ${String(isApproved).toUpperCase()}`)
-		if (isApproved) {
+		if (stage === ProposalStage.Approval) {
+			console.debug(`Passing:    FALSE (voting hasn't started yet!)`)
+		} else {
 			console.debug(`Passing:    ${String(record.passing).toUpperCase()}`)
 			const total = record.votes.Yes.plus(record.votes.No).plus(record.votes.Abstain)
 			const pctYes = record.votes.Yes.multipliedBy(100).dividedToIntegerBy(total)
