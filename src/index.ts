@@ -10,11 +10,11 @@ import { concurrentMap } from '@celo/utils/lib/async'
 
 
 const program = commander.program
-  .version('0.0.1')
-  .description("Parse and read CELO governance proposals.")
-  .option("-n --network <url>", "CELO url to connect to.", "http://127.0.0.1:8545")
-  .option("-i --proposalID <number>", "Governance Proposal ID")
-  .parse(process.argv);
+	.version(require('../package.json').version)
+	.description("Parse and read CELO governance proposals.")
+	.option("-n --network <url>", "CELO url to connect to.", "http://127.0.0.1:8545")
+	.option("-i --proposalID <number>", "Governance Proposal ID")
+	.parse(process.argv);
 
 
 process.on('unhandledRejection', (reason, _promise) => {
