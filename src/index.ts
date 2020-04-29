@@ -96,7 +96,7 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 
 	let stage = record.stage
 	if (stage !== ProposalStage.Queued) {
-		const isExpired = governance.isDequeuedProposalExpired(proposalID)
+		const isExpired = await governance.isDequeuedProposalExpired(proposalID)
 		if (isExpired) {
 			stage = ProposalStage.Expiration
 		}
