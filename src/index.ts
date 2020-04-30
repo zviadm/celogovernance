@@ -7,6 +7,7 @@ import { BlockExplorer } from '@celo/contractkit/lib/explorer/block-explorer'
 import { Proposal, ProposalTransaction, ProposalStage, VoteValue } from '@celo/contractkit/lib/wrappers/Governance';
 import { Transaction } from 'web3-eth'
 import { concurrentMap } from '@celo/utils/lib/async'
+import { fromFixed } from '@celo/utils/lib/fixidity'
 
 
 const program = commander.program
@@ -80,6 +81,7 @@ function epochDate(epochSecs: BigNumber): string {
 
 async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	const governance = await kit.contracts.getGovernance()
+	const lockedGold = await kit.contracts.getLockedGold()
 	const record = await governance.getProposalRecord(proposalID)
 	const propJSON = await proposalToJSON(kit, record.proposal)
 
@@ -126,7 +128,17 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 			const pctYes = record.votes.Yes.multipliedBy(100).dividedToIntegerBy(total)
 			const pctNo = record.votes.No.multipliedBy(100).dividedToIntegerBy(total)
 			const pctAbst = record.votes.Abstain.multipliedBy(100).dividedToIntegerBy(total)
-			console.debug(`  YES:     ${pctYes}% - ${record.votes.Yes.div(1e18).toFixed(18)}`)
+
+			const totalLocked = await lockedGold.getTotalLockedGold()
+			const totalPct = total.multipliedBy(100).dividedToIntegerBy(totalLocked)
+
+			const params = await governance.getParticipationParameters()
+			const baselinePct = fromFixed(params.baseline).multipliedBy(100).integerValue()
+			const constitution = await governance.getConstitution(record.proposal)
+			const pctYesNeeded = constitution.multipliedBy(100)
+
+			console.debug(`  TOTAL:   ${totalPct}% (Needs ${baselinePct}%) - ${total.div(1e18).toFixed(18)} out of ${totalLocked.div(1e18).toFixed(18)}`)
+			console.debug(`  YES:     ${pctYes}% (Needs ${pctYesNeeded}%) - ${record.votes.Yes.div(1e18).toFixed(18)}`)
 			console.debug(`  NO:      ${pctNo}% - ${record.votes.No.div(1e18).toFixed(18)}`)
 			console.debug(`  ABSTAIN: ${pctAbst}% - ${record.votes.Abstain.div(1e18).toFixed(18)}`)
 		}
