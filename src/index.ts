@@ -7,7 +7,6 @@ import { BlockExplorer } from '@celo/contractkit/lib/explorer/block-explorer'
 import { Proposal, ProposalTransaction, ProposalStage, VoteValue } from '@celo/contractkit/lib/wrappers/Governance';
 import { Transaction } from 'web3-eth'
 import { concurrentMap } from '@celo/utils/lib/async'
-import { fromFixed } from '@celo/utils/lib/fixidity'
 
 
 const program = commander.program
@@ -133,7 +132,7 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 			const totalPct = total.multipliedBy(100).dividedToIntegerBy(totalLocked)
 
 			const params = await governance.getParticipationParameters()
-			const baselinePct = fromFixed(params.baseline).multipliedBy(100).integerValue()
+			const baselinePct = params.baseline.multipliedBy(100).integerValue()
 			const constitution = await governance.getConstitution(record.proposal)
 			const pctYesNeeded = constitution.multipliedBy(100)
 
