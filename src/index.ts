@@ -14,7 +14,7 @@ const program = commander.program
 	.description("Parse and read CELO governance proposals.")
 	.option("-n --network <url>", "CELO url to connect to.", "http://127.0.0.1:8545")
 	.option("-i --proposalID <number>", "Governance Proposal ID")
-	.option("-h --history", "List or view already executed Governane proposals", false)
+	.option("--history", "List or view already executed Governane proposals", false)
 	.parse(process.argv);
 
 
