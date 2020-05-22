@@ -12,7 +12,7 @@ import { concurrentMap } from '@celo/utils/lib/async'
 const program = commander.program
 	.version(require('../package.json').version)
 	.description("Parse and read CELO governance proposals.")
-	.option("-n --network <url>", "CELO url to connect to.", "http://127.0.0.1:8545")
+	.option("-n --network <url>", "CELO url to connect to.", "https://rc1-forno.celo-testnet.org")
 	.option("-i --proposalID <number>", "Governance Proposal ID")
 	.option("--history", "List or view already executed Governane proposals", false)
 	.parse(process.argv);
