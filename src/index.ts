@@ -14,6 +14,7 @@ const program = commander.program
 	.description("Parse and read CELO governance proposals.")
 	.option("-n --network <url>", "CELO url to connect to.", "http://127.0.0.1:8545")
 	.option("-i --proposalID <number>", "Governance Proposal ID")
+	.option("-h --history", "List or view already executed Governane proposals", false)
 	.parse(process.argv);
 
 
@@ -82,6 +83,25 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	const governance = await kit.contracts.getGovernance()
 	const lockedGold = await kit.contracts.getLockedGold()
 	const record = await governance.getProposalRecord(proposalID)
+	if (record.proposal.length === 0) {
+		// check if there is history.
+		const governanceDirect = await kit._web3Contracts.getGovernance()
+		const eventLog = await governanceDirect.getPastEvents('ProposalQueued', {fromBlock: 0})
+		const event = eventLog.find((e) => new BigNumber(e.returnValues.proposalId).eq(proposalID))
+		if (!event) {
+			throw new Error(`Proposal ${proposalID.toString()} was not found`)
+		}
+		const executedLog = await governanceDirect.getPastEvents('ProposalExecuted', {fromBlock: event.blockNumber})
+		const executed = executedLog.find((e) => new BigNumber(e.returnValues.proposalId).eq(proposalID))
+
+		const proposer: string = event.returnValues.proposer
+		const proposerURL = "https://explorer.celo.org/address/" + proposer
+		console.debug(`ProposalID: ${proposalID}`)
+		console.debug(`Proposer: ${proposerURL}`)
+		console.debug((executed) ? `EXECUTED` : `EXPIRED`)
+		return
+	}
+
 	const propJSON = await proposalToJSON(kit, record.proposal)
 
 	const durations = await governance.stageDurations()
@@ -160,12 +180,7 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	}
 }
 
-async function viewOrList(kit: ContractKit, proposalID: any) {
-	if (proposalID) {
-		await viewProposal(kit, new BigNumber(proposalID))
-		return
-	}
-
+async function listProposals(kit: ContractKit) {
 	const governance = await kit.contracts.getGovernance()
 	const pastQueue = await governance.getDequeue(true)
 	if (pastQueue.length > 0) {
@@ -196,20 +211,28 @@ async function viewOrList(kit: ContractKit, proposalID: any) {
 	}
 }
 
-function main() {
+async function listExecutedProposals(kit: ContractKit) {
+	const governanceDirect = await kit._web3Contracts.getGovernance()
+	const eventLog = await governanceDirect.getPastEvents('ProposalExecuted', {fromBlock: 0})
+	console.debug("Executed proposals:")
+	for (const event of eventLog) {
+		const pId = new BigNumber(event.returnValues.proposalId)
+		console.debug(`ID: ${pId.toString()}, Block: @${event.blockNumber}, https://explorer.celo.org/tx/${event.transactionHash}`)
+	}
+}
+
+async function main() {
 	const opts = program.opts()
 	const kit = newKit(opts.network)
-	viewOrList(
-		kit,
-		opts.proposalID,
-		).
-	then(() => {
-		process.exit(0)
-	}).
-	catch((e) => {
-		console.error(e)
-		process.exit(1)
-	})
+	if (opts.proposalID) {
+		await viewProposal(kit, new BigNumber(opts.proposalID))
+		return
+	}
+	if (opts.history) {
+		await listExecutedProposals(kit)
+		return
+	}
+	listProposals(kit)
 }
 
 main()
