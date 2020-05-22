@@ -1,6 +1,6 @@
 {
   "name": "celogovernance",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "Parse and read CELO governance proposals.",
   "main": "./dist/index.js",
   "bin": {
