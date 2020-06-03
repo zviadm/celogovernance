@@ -10,6 +10,7 @@ import { concurrentMap } from '@celo/utils/lib/async'
 
 
 const program = commander.program
+	// tslint:disable-next-line: no-var-requires
 	.version(require('../package.json').version)
 	.description("Parse and read CELO governance proposals.")
 	.option("-n --network <url>", "CELO url to connect to.", "https://rc1-forno.celo-testnet.org")
@@ -43,17 +44,17 @@ export const proposalToJSON = async (kit: ContractKit, proposal: Proposal) => {
 			throw new Error(`Unable to parse ${tx} with block explorer`)
 		}
 		const paramMap = parsedTx.callDetails.paramMap
-		if (Object.keys(paramMap).length != parsedTx.callDetails.argList.length) {
+		if (Object.keys(paramMap).length !== parsedTx.callDetails.argList.length) {
 			throw new Error(
-				`Length of parameters ${Object.keys(paramMap).length} `+
+				`Length of parameters ${Object.keys(paramMap).length} ` +
 				`doesn't match length of arguments ${parsedTx.callDetails.argList.length}`)
 		}
-		for (const k in paramMap) {
+		for (let k = 0; k < paramMap.length; k += 1) {
 			const v = paramMap[k]
 			if (typeof v !== "string") {
 				continue
 			}
-			if (!v.startsWith("0x") || v.length != 42) {
+			if (!v.startsWith("0x") || v.length !== 42) {
 				continue
 			}
 			// Most likely this is an address, try to give some more meaning to it.
@@ -83,7 +84,7 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	const governance = await kit.contracts.getGovernance()
 	const lockedGold = await kit.contracts.getLockedGold()
 	const record = await governance.getProposalRecord(proposalID)
-	if (record.proposal.length === 0) {
+	if (record.stage === ProposalStage.Expiration) {
 		// check if there is history.
 		const governanceDirect = await kit._web3Contracts.getGovernance()
 		const eventLog = await governanceDirect.getPastEvents('ProposalQueued', {fromBlock: 0})
@@ -95,9 +96,8 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 		const executed = executedLog.find((e) => new BigNumber(e.returnValues.proposalId).eq(proposalID))
 
 		const proposer: string = event.returnValues.proposer
-		const proposerURL = "https://explorer.celo.org/address/" + proposer
 		console.debug(`ProposalID: ${proposalID}`)
-		console.debug(`Proposer: ${proposerURL}`)
+		console.debug(`Proposer: ${"https://explorer.celo.org/address/" + proposer}`)
 		console.debug((executed) ? `EXECUTED` : `EXPIRED`)
 		return
 	}
@@ -115,17 +115,13 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	console.debug(`Proposer: ${proposerURL}`)
 	console.debug(`Description: ${record.metadata.descriptionURL}`)
 
-	let stage = record.stage
+	const stage = record.stage
 	if (stage === ProposalStage.Queued) {
 		console.debug(`Stage:      ${stage}`)
 		console.debug(`Proposed:   ${epochDate(propEpoch)}`)
 		console.debug(`Expires:    ${epochDate(expirationEpoch)}`)
 		console.debug(`UpVotes:    ${record.upvotes.div(1e18).toFixed(18)}`)
 	} else {
-		const isExpired = await governance.isDequeuedProposalExpired(proposalID)
-		if (isExpired) {
-			stage = ProposalStage.Expiration
-		}
 		console.debug(`Stage:      ${stage}`)
 		console.debug(`Dequeued:   ${epochDate(propEpoch)}`)
 		if (stage === ProposalStage.Approval) {
@@ -133,9 +129,6 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 		}
 		if (stage === ProposalStage.Approval || stage === ProposalStage.Referendum) {
 			console.debug(`Execution:  ${epochDate(executionEpoch)}`)
-		}
-		if (stage != ProposalStage.Expiration) {
-			console.debug(`Expires:    ${epochDate(expirationEpoch)}`)
 		}
 		const isApproved = await governance.isApproved(proposalID)
 		console.debug(`Approved:   ${String(isApproved).toUpperCase()}`)
@@ -164,10 +157,10 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	}
 
 	console.debug(``)
-	for (const idx in record.proposal) {
+	for (let idx = 0; idx < record.proposal.length; idx += 1) {
 		const tx = propJSON[idx]
 		const params: string[] = []
-		for (let k in tx.params) {
+		for (let k = 0; k < tx.params.length; k += 1) {
 			params.push(`${k}=${tx.params[k]}`)
 		}
 		let paramsMsg = ""
