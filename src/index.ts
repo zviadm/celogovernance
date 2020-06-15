@@ -69,7 +69,7 @@ export const proposalToJSON = async (kit: ContractKit, proposal: Proposal) => {
 		return {
 			contract: parsedTx.callDetails.contract as CeloContract,
 			function: parsedTx.callDetails.function,
-			params: parsedTx.callDetails.paramMap,
+			params: paramMap,
 			value: parsedTx.tx.value,
 		}
 	})
@@ -96,9 +96,9 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 		const executed = executedLog.find((e) => new BigNumber(e.returnValues.proposalId).eq(proposalID))
 
 		const proposer: string = event.returnValues.proposer
-		console.debug(`ProposalID: ${proposalID}`)
-		console.debug(`Proposer: ${"https://explorer.celo.org/address/" + proposer}`)
-		console.debug((executed) ? `EXECUTED` : `EXPIRED`)
+		console.info(`ProposalID: ${proposalID}`)
+		console.info(`Proposer: ${"https://explorer.celo.org/address/" + proposer}`)
+		console.info((executed) ? `EXECUTED` : `EXPIRED`)
 		return
 	}
 
@@ -111,31 +111,31 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	const expirationEpoch = executionEpoch.plus(durations.Execution)
 
 	const proposerURL = "https://explorer.celo.org/address/" + record.metadata.proposer
-	console.debug(`ProposalID: ${proposalID}`)
-	console.debug(`Proposer: ${proposerURL}`)
-	console.debug(`Description: ${record.metadata.descriptionURL}`)
+	console.info(`ProposalID: ${proposalID}`)
+	console.info(`Proposer: ${proposerURL}`)
+	console.info(`Description: ${record.metadata.descriptionURL}`)
 
 	const stage = record.stage
 	if (stage === ProposalStage.Queued) {
-		console.debug(`Stage:      ${stage}`)
-		console.debug(`Proposed:   ${epochDate(propEpoch)}`)
-		console.debug(`Expires:    ${epochDate(expirationEpoch)}`)
-		console.debug(`UpVotes:    ${record.upvotes.div(1e18).toFixed(18)}`)
+		console.info(`Stage:      ${stage}`)
+		console.info(`Proposed:   ${epochDate(propEpoch)}`)
+		console.info(`Expires:    ${epochDate(expirationEpoch)}`)
+		console.info(`UpVotes:    ${record.upvotes.div(1e18).toFixed(18)}`)
 	} else {
-		console.debug(`Stage:      ${stage}`)
-		console.debug(`Dequeued:   ${epochDate(propEpoch)}`)
+		console.info(`Stage:      ${stage}`)
+		console.info(`Dequeued:   ${epochDate(propEpoch)}`)
 		if (stage === ProposalStage.Approval) {
-			console.debug(`Referendum: ${epochDate(referrendumEpoch)}`)
+			console.info(`Referendum: ${epochDate(referrendumEpoch)}`)
 		}
 		if (stage === ProposalStage.Approval || stage === ProposalStage.Referendum) {
-			console.debug(`Execution:  ${epochDate(executionEpoch)}`)
+			console.info(`Execution:  ${epochDate(executionEpoch)}`)
 		}
 		const isApproved = await governance.isApproved(proposalID)
-		console.debug(`Approved:   ${String(isApproved).toUpperCase()}`)
+		console.info(`Approved:   ${String(isApproved).toUpperCase()}`)
 		if (stage === ProposalStage.Approval) {
-			console.debug(`Passing:    FALSE (voting hasn't started yet!)`)
+			console.info(`Passing:    FALSE (voting hasn't started yet!)`)
 		} else if (isApproved) {
-			console.debug(`Passing:    ${String(record.passing).toUpperCase()}`)
+			console.info(`Passing:    ${String(record.passing).toUpperCase()}`)
 			const total = record.votes.Yes.plus(record.votes.No).plus(record.votes.Abstain)
 			const pctYes = record.votes.Yes.multipliedBy(100).dividedToIntegerBy(total)
 			const pctNo = record.votes.No.multipliedBy(100).dividedToIntegerBy(total)
@@ -149,18 +149,18 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 			const constitution = await governance.getConstitution(record.proposal)
 			const pctYesNeeded = constitution.multipliedBy(100)
 
-			console.debug(`  TOTAL:   ${totalPct}% (Needs ${baselinePct}%) - ${total.div(1e18).toFixed(18)} out of ${totalLocked.div(1e18).toFixed(18)}`)
-			console.debug(`  YES:     ${pctYes}% (Needs ${pctYesNeeded}%) - ${record.votes.Yes.div(1e18).toFixed(18)}`)
-			console.debug(`  NO:      ${pctNo}% - ${record.votes.No.div(1e18).toFixed(18)}`)
-			console.debug(`  ABSTAIN: ${pctAbst}% - ${record.votes.Abstain.div(1e18).toFixed(18)}`)
+			console.info(`  TOTAL:   ${totalPct}% (Needs ${baselinePct}%) - ${total.div(1e18).toFixed(18)} out of ${totalLocked.div(1e18).toFixed(18)}`)
+			console.info(`  YES:     ${pctYes}% (Needs ${pctYesNeeded}%) - ${record.votes.Yes.div(1e18).toFixed(18)}`)
+			console.info(`  NO:      ${pctNo}% - ${record.votes.No.div(1e18).toFixed(18)}`)
+			console.info(`  ABSTAIN: ${pctAbst}% - ${record.votes.Abstain.div(1e18).toFixed(18)}`)
 		}
 	}
 
-	console.debug(``)
+	console.info(``)
 	for (let idx = 0; idx < record.proposal.length; idx += 1) {
 		const tx = propJSON[idx]
 		const params: string[] = []
-		for (let k = 0; k < tx.params.length; k += 1) {
+		for (const k of Object.keys(tx.params)) {
 			params.push(`${k}=${tx.params[k]}`)
 		}
 		let paramsMsg = ""
@@ -169,7 +169,7 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 		} else if (params.length > 1) {
 			paramsMsg = "\n    " + params.join(",\n    ") + ",\n"
 		}
-		console.debug(`${tx.contract}.${tx.function}(${paramsMsg})`)
+		console.info(`${tx.contract}.${tx.function}(${paramsMsg})`)
 	}
 }
 
@@ -177,7 +177,7 @@ async function listProposals(kit: ContractKit) {
 	const governance = await kit.contracts.getGovernance()
 	const pastQueue = await governance.getDequeue(true)
 	if (pastQueue.length > 0) {
-		console.debug(`Proposals (${pastQueue.length}):`)
+		console.info(`Proposals (${pastQueue.length}):`)
 		for (const proposalID of pastQueue) {
 			const expired = await governance.isDequeuedProposalExpired(proposalID)
 			const stage = await governance.getProposalStage(proposalID)
@@ -185,21 +185,21 @@ async function listProposals(kit: ContractKit) {
 			if (expired) {
 				msg += ` (EXPIRED)`
 			}
-			console.debug(msg)
+			console.info(msg)
 		}
 	}
 
 	const queue = await governance.getQueue()
 	if (queue.length > 0) {
-		console.debug(``)
-		console.debug(`Queued (${queue.length}):`)
+		console.info(``)
+		console.info(`Queued (${queue.length}):`)
 		for (const q of queue) {
 			const expired = await governance.isQueuedProposalExpired(q.proposalID)
 			let msg = `ID: ${q.proposalID}, UpVotes: ${q.upvotes.div(1e18).toFixed(18)}`
 			if (expired) {
 				msg += " (EXPIRED)"
 			}
-			console.debug(msg)
+			console.info(msg)
 		}
 	}
 }
@@ -207,10 +207,10 @@ async function listProposals(kit: ContractKit) {
 async function listExecutedProposals(kit: ContractKit) {
 	const governanceDirect = await kit._web3Contracts.getGovernance()
 	const eventLog = await governanceDirect.getPastEvents('ProposalExecuted', {fromBlock: 0})
-	console.debug("Executed proposals:")
+	console.info("Executed proposals:")
 	for (const event of eventLog) {
 		const pId = new BigNumber(event.returnValues.proposalId)
-		console.debug(`ID: ${pId.toString()}, Block: @${event.blockNumber}, https://explorer.celo.org/tx/${event.transactionHash}`)
+		console.info(`ID: ${pId.toString()}, Block: @${event.blockNumber}, https://explorer.celo.org/tx/${event.transactionHash}`)
 	}
 }
 
