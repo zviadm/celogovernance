@@ -77,7 +77,7 @@ export const proposalToJSON = async (kit: ContractKit, proposal: Proposal) => {
 
 function epochDate(epochSecs: BigNumber): string {
 	const d = new Date(epochSecs.multipliedBy(1000).toNumber())
-	return `${d.toUTCString()}`
+	return `${d.toLocaleString()}`
 }
 
 async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
