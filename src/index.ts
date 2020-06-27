@@ -140,19 +140,18 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 			const pctYes = record.votes.Yes.multipliedBy(100).dividedToIntegerBy(total)
 			const pctNo = record.votes.No.multipliedBy(100).dividedToIntegerBy(total)
 			const pctAbst = record.votes.Abstain.multipliedBy(100).dividedToIntegerBy(total)
-
 			const totalLocked = await lockedGold.getTotalLockedGold()
-			const totalPct = total.multipliedBy(100).dividedToIntegerBy(totalLocked)
 
 			const params = await governance.getParticipationParameters()
-			const baselinePct = params.baseline.multipliedBy(100).integerValue()
 			const constitution = await governance.getConstitution(record.proposal)
-			const pctYesNeeded = constitution.multipliedBy(100)
+			const totalNeeded = constitution.multipliedBy(BigNumber.maximum(total, totalLocked.multipliedBy(params.baseline)))
+			const moreNeeded = BigNumber.maximum(totalNeeded.minus(record.votes.Yes), 0)
 
-			console.info(`  TOTAL:   ${totalPct}% (Needs ${baselinePct}%) - ${total.div(1e18).toFixed(18)} out of ${totalLocked.div(1e18).toFixed(18)}`)
-			console.info(`  YES:     ${pctYes}% (Needs ${pctYesNeeded}%) - ${record.votes.Yes.div(1e18).toFixed(18)}`)
-			console.info(`  NO:      ${pctNo}% - ${record.votes.No.div(1e18).toFixed(18)}`)
-			console.info(`  ABSTAIN: ${pctAbst}% - ${record.votes.Abstain.div(1e18).toFixed(18)}`)
+			console.info(
+				`  YES:      ${pctYes.toString().padStart(3)}% - ${record.votes.Yes.div(1e18).toFixed(2)} ` +
+				`(Needs ${moreNeeded.div(1e18).toFixed(2)} more to pass)`)
+			console.info(`  NO:       ${pctNo.toString().padStart(3)}% - ${record.votes.No.div(1e18).toFixed(2)}`)
+			console.info(`  ABSTAIN:  ${pctAbst.toString().padStart(3)}% - ${record.votes.Abstain.div(1e18).toFixed(2)}`)
 		}
 	}
 
