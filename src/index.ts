@@ -135,7 +135,8 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 		if (stage === ProposalStage.Approval) {
 			console.info(`Passing:    FALSE (voting hasn't started yet!)`)
 		} else if (isApproved) {
-			console.info(`Passing:    ${String(record.passing).toUpperCase()}`)
+			const constitution = await governance.getConstitution(record.proposal)
+			console.info(`Passing:    ${String(record.passing).toUpperCase()}, Threshold: ${constitution.multipliedBy(100)}%`)
 			const total = record.votes.Yes.plus(record.votes.No).plus(record.votes.Abstain)
 			const pctYes = record.votes.Yes.multipliedBy(100).dividedToIntegerBy(total)
 			const pctNo = record.votes.No.multipliedBy(100).dividedToIntegerBy(total)
@@ -143,7 +144,6 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 			const totalLocked = await lockedGold.getTotalLockedGold()
 
 			const params = await governance.getParticipationParameters()
-			const constitution = await governance.getConstitution(record.proposal)
 			const totalNeeded = constitution.multipliedBy(BigNumber.maximum(total, totalLocked.multipliedBy(params.baseline)))
 			const moreNeeded = BigNumber.maximum(totalNeeded.minus(record.votes.Yes), 0)
 
