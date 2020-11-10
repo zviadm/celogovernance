@@ -13,7 +13,7 @@ const program = commander.program
 	// tslint:disable-next-line: no-var-requires
 	.version(require('../package.json').version)
 	.description("Parse and read CELO governance proposals.")
-	.option("-n --network <url>", "CELO url to connect to.", "https://rc1-forno.celo-testnet.org")
+	.option("-n --network <url>", "CELO url to connect to.", "https://forno.celo.org")
 	.option("-i --proposalID <number>", "Governance Proposal ID")
 	.option("--history", "List or view already executed Governane proposals", false)
 	.parse(process.argv);
@@ -26,10 +26,10 @@ process.on('unhandledRejection', (reason, _promise) => {
 })
 
 export interface ProposalTransactionJSON {
-	contract: CeloContract
+	contract: CeloContract | string
 	function: string
-	params: Record<string, any>
 	value: string
+	params?: Record<string, any>
 }
 
 export const proposalToJSON = async (kit: ContractKit, proposal: Proposal) => {
@@ -41,7 +41,12 @@ export const proposalToJSON = async (kit: ContractKit, proposal: Proposal) => {
 	return concurrentMap<ProposalTransaction, ProposalTransactionJSON>(4, proposal, async (tx) => {
 		const parsedTx = blockExplorer.tryParseTx(tx as Transaction)
 		if (parsedTx == null) {
-			throw new Error(`Unable to parse ${tx} with block explorer`)
+			console.warn(`WARN: Unable to parse TX with block explorer`, tx)
+			return {
+				contract: `Contract:${tx.to}`,
+				function: `INPUT:${tx.input}`,
+				value: tx.value,
+			}
 		}
 		const paramMap = parsedTx.callDetails.paramMap
 		if (Object.keys(paramMap).length !== parsedTx.callDetails.argList.length) {
@@ -159,8 +164,10 @@ async function viewProposal(kit: ContractKit, proposalID: BigNumber) {
 	for (let idx = 0; idx < record.proposal.length; idx += 1) {
 		const tx = propJSON[idx]
 		const params: string[] = []
-		for (const k of Object.keys(tx.params)) {
-			params.push(`${k}=${tx.params[k]}`)
+		if (tx.params) {
+			for (const k of Object.keys(tx.params)) {
+				params.push(`${k}=${tx.params[k]}`)
+			}
 		}
 		let paramsMsg = ""
 		if (params.length === 1) {
